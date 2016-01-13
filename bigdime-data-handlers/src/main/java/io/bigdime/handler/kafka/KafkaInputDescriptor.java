@@ -4,11 +4,16 @@
 package io.bigdime.handler.kafka;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import com.google.common.base.Preconditions;
+
 import io.bigdime.core.InputDescriptor;
+import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.handler.constants.KafkaReaderHandlerConstants;
 
 /**
  * Encapsulates the fields(topic, partition) that are needed to connect to
@@ -22,14 +27,21 @@ public class KafkaInputDescriptor implements InputDescriptor<String> {
 
 	private String topic;
 	private int partition;
+	private String entityName;
+	
 
 	public KafkaInputDescriptor() {
 
 	}
-
+	/**
+	 * The default value of entity is derived from topic
+	 * @param topic
+	 * @param partition
+	 */
 	public KafkaInputDescriptor(String topic, int partition) {
 		this.topic = topic;
 		this.partition = partition;
+		this.entityName = topic;
 	}
 
 	/**
@@ -60,6 +72,19 @@ public class KafkaInputDescriptor implements InputDescriptor<String> {
 			partition = Integer.valueOf(stringParts[1]);
 		}
 	}
+	/**
+	 * default value of entity derived from topic
+	 * @param descriptor
+	 */
+	public void parseDescriptor(Map<String, Object> properties ) {
+			topic = PropertyHelper.getStringProperty(properties, KafkaReaderHandlerConstants.TOPIC);
+			partition = PropertyHelper.getIntProperty(properties, KafkaReaderHandlerConstants.PARTITION, -1);
+			Preconditions.checkNotNull(topic,"Valid topic is required and cannot be null");
+			if(partition < 0){
+				throw new IllegalArgumentException("valid partition is required partition="+partition);
+			}
+			entityName = PropertyHelper.getStringProperty(properties, KafkaReaderHandlerConstants.ENTITY_NAME,topic);
+	}
 
 	@Override
 	public String toString() {
@@ -80,6 +105,14 @@ public class KafkaInputDescriptor implements InputDescriptor<String> {
 
 	public void setPartition(int partition) {
 		this.partition = partition;
+	}
+
+	public String getEntityName() {
+		return entityName;
+	}
+
+	public void setEntityName(String entityName) {
+		this.entityName = entityName;
 	}
 
 }

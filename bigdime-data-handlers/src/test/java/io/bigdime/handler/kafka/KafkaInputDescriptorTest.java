@@ -56,7 +56,7 @@ public class KafkaInputDescriptorTest {
 	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "descriptor can't be null or empty")
 	public void testParseDescriptorWithNullDescriptor() {
 		KafkaInputDescriptor kafkaInputDescriptor = new KafkaInputDescriptor();
-		kafkaInputDescriptor.parseDescriptor(null);
+		kafkaInputDescriptor.parseDescriptor("");
 	}
 
 	/**

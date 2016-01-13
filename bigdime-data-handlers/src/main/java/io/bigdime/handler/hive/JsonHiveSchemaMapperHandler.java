@@ -54,14 +54,17 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
+import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.JsonHelper;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.commons.TimeManager;
 import io.bigdime.core.config.AdaptorConfig;
+import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
 import io.bigdime.core.handler.SimpleJournal;
+import io.bigdime.handler.kafka.KafkaInputDescriptor;
 
 /**
  * 
@@ -115,8 +118,22 @@ public class JsonHiveSchemaMapperHandler extends AbstractHandler {
 		logger.debug(handlerPhase, "building JsonHiveSchemaMapperHandler");
 		Metasegment metaSegment = null;
 		schemaFileName = PropertyHelper.getStringProperty(getPropertyMap(), SCHEMA_FILE_NAME);
-		//TODO : find a way to get the entityName from configurations.
-		entityName = PropertyHelper.getStringProperty(getPropertyMap(),ENTITY_NAME);
+
+		
+		@SuppressWarnings("unchecked")
+		Entry<Object, String> srcDescInputs = (Entry<Object, String>) getPropertyMap().get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
+		@SuppressWarnings("unchecked")
+		Map<String,Object>  inputMetadata = (Map<String,Object>) srcDescInputs.getKey();
+		
+		KafkaInputDescriptor inputDescriptor = new KafkaInputDescriptor();
+		try {
+			inputDescriptor.parseDescriptor(inputMetadata);
+		} catch (IllegalArgumentException ex) {
+			throw new InvalidValueConfigurationException(
+					 "incorrect value specified in src-desc "+ ex.getMessage());
+		}
+
+		entityName = inputDescriptor.getEntityName();
 		Preconditions.checkNotNull(entityName,"entityName should not be null");
 		columnSeparatedBy = PropertyHelper.getStringProperty(getPropertyMap(), COLUMN_SEPARATED_BY, CTRL_A);
 		rowSeparatedBy = PropertyHelper.getStringProperty(getPropertyMap(), ROW_SEPARATED_BY, EOL);
@@ -171,7 +188,7 @@ public class JsonHiveSchemaMapperHandler extends AbstractHandler {
 
 			JsonNode jn = objectMapper.readTree(actionEvent.getBody());
 			String account = jsonHelper.getRequiredStringProperty(jn, "account");
-			actionEvent.getHeaders().put(ACCOUNT, "tracking");
+			actionEvent.getHeaders().put(ACCOUNT, account);
 			JsonNode context = jsonHelper.getRequiredNode(jn, "context");
 			try {
 				String serverTimestamp = context.get("serverTimestamp").getTextValue();
@@ -184,7 +201,10 @@ public class JsonHiveSchemaMapperHandler extends AbstractHandler {
 			} catch (Exception e) {
 				DateTime dt = timeManager.getLocalDateTime();
 				String dateFormat = timeManager.format(TimeManager.FORMAT_YYYYMMDD, dt);
+				String hour = hourFormatter.print(dt);
 				actionEvent.getHeaders().put(TIMESTAMP, dateFormat);
+				actionEvent.getHeaders().put(HOUR, hour);
+				
 			}
 			actionEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
@@ -270,7 +290,7 @@ public class JsonHiveSchemaMapperHandler extends AbstractHandler {
 				throw new FileNotFoundException(schemaFileName);
 			}
 			jsonNode = objectMapper.readTree(is);
-			metaSegment = metaDataJsonUtils.convertJsonToMetaData(AdaptorConfig.getInstance().getName(),
+			metaSegment = metaDataJsonUtils.convertJsonToMetaData(AdaptorConfig.getInstance().getName(),entityName,
 					jsonNode);
 		}catch (IOException e) {
 			logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INPUT_ERROR, ALERT_SEVERITY.BLOCKER,

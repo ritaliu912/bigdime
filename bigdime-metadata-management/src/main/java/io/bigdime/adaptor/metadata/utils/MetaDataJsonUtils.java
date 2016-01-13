@@ -73,7 +73,7 @@ public class MetaDataJsonUtils {
 	 * @throws JsonProcessingException
 	 * @throws IOException
 	 */
-	public Metasegment convertJsonToMetaData(String applicationName, JsonNode schema) {
+	public Metasegment convertJsonToMetaData(String applicationName,String entityName, JsonNode schema) {
 		Set<Entry<String, Object>> entries = null;
 		Attribute attribute = null;
 		String comment = null;
@@ -101,7 +101,7 @@ public class MetaDataJsonUtils {
 			attributesSet.add(attribute);
 		}
 
-		entities = convertJsonToEntitee(applicationName, hiveTable);
+		entities = convertJsonToEntitee(applicationName,entityName, hiveTable);
 		entities.setAttributes(attributesSet);
 		entitySet.add(entities);
 
@@ -119,12 +119,9 @@ public class MetaDataJsonUtils {
 		return metasegment;
 	}
 
-	public Entitee convertJsonToEntitee(String applicationName, JsonNode hiveTable) {
+	public Entitee convertJsonToEntitee(String applicationName, String entityName,JsonNode hiveTable) {
 		Entitee entitee = new Entitee();
-		logger.debug(applicationName, "adding entity", "entity_name={}",
-				jsonHelper.getRequiredStringProperty(hiveTable, "name"));
-		entitee.setEntityName(jsonHelper.getRequiredStringProperty(hiveTable, "name"));
-		entitee.setEntityLocation(jsonHelper.getRequiredStringProperty(hiveTable, "location"));
+		entitee.setEntityName(entityName);
 		return entitee;
 
 	}

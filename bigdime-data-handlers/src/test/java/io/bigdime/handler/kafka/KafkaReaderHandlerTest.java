@@ -3,6 +3,7 @@
  */
 package io.bigdime.handler.kafka;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +14,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testng.Assert;
@@ -25,6 +29,8 @@ import io.bigdime.core.DataAdaptorException;
 import io.bigdime.core.DataChannel;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
+import io.bigdime.core.commons.JsonHelper;
+import io.bigdime.core.commons.MapDescriptorParser;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
@@ -46,12 +52,19 @@ public class KafkaReaderHandlerTest {
 	}
 
 	@Test
-	public void testBuild() throws HandlerException, AdaptorConfigurationException {
+	public void testBuild() throws HandlerException, AdaptorConfigurationException, JsonProcessingException, IOException {
 		KafkaReaderHandler handler = new KafkaReaderHandler();
 		Map<String, Object> propertyMap = new HashMap<>();
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
+		MapDescriptorParser descriptorParser = new MapDescriptorParser();
+		String jsonString = "{\"unit-input\" : {\"entity-name\" : \"unit-entity-name-value\",\"topic\" : \"topic1\",\"partition\" : \"1\", \"unit-separator\" : \"unit-separator-value\"}}";
 
-		srcDEscEntryMap.put("topic1:1", "input1");
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode actualObj = mapper.readTree(jsonString);
+		Map<String, Object> properties = new JsonHelper().getNodeTree(actualObj);
+		Map<Object, String> srcDEscEntryMap = descriptorParser.parseDescriptor("unit-input", properties.get("unit-input"));
+
+
+		
 		propertyMap.put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC,
 				srcDEscEntryMap.entrySet().iterator().next());
 		propertyMap.put(KafkaReaderHandlerConstants.BROKERS, "unit-test-ip-1:9999,unit-test-ip-2:8888");
@@ -62,28 +75,10 @@ public class KafkaReaderHandlerTest {
 		handler.build();
 		Assert.assertEquals(handler.getInputDescriptor().getTopic(), "topic1");
 		Assert.assertEquals(handler.getInputDescriptor().getPartition(), 1);
+		Assert.assertEquals(handler.getInputDescriptor().getEntityName(), "unit-entity-name-value");
+		
 	}
 
-	/**
-	 * src-desc must be in topic:parition format.
-	 * 
-	 * @throws HandlerException
-	 * @throws AdaptorConfigurationException
-	 */
-	@Test(expectedExceptions = { AdaptorConfigurationException.class,
-			InvalidValueConfigurationException.class }, expectedExceptionsMessageRegExp = "incorrect value specified in src-desc, value must be in topic:partition format")
-	public void testBuildWithInvalidSrcDesc() throws HandlerException, AdaptorConfigurationException {
-		KafkaReaderHandler handler = new KafkaReaderHandler();
-		Map<String, Object> propertyMap = new HashMap<>();
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
-
-		srcDEscEntryMap.put("topic1,topic2", "input1");
-		propertyMap.put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC,
-				srcDEscEntryMap.entrySet().iterator().next());
-
-		handler.setPropertyMap(propertyMap);
-		handler.build();
-	}
 
 	/**
 	 * src-desc must be in topic:parition format and partition should be an
@@ -91,15 +86,23 @@ public class KafkaReaderHandlerTest {
 	 * 
 	 * @throws HandlerException
 	 * @throws AdaptorConfigurationException
+	 * @throws IOException 
+	 * @throws JsonProcessingException 
 	 */
 	@Test(expectedExceptions = { AdaptorConfigurationException.class,
-			InvalidValueConfigurationException.class }, expectedExceptionsMessageRegExp = "incorrect value of partition specified in src-desc")
-	public void testBuildWithInvalidPartition() throws HandlerException, AdaptorConfigurationException {
+			InvalidValueConfigurationException.class }, expectedExceptionsMessageRegExp = "incorrect value specified in src-desc .*")
+	public void testBuildWithInvalidPartition() throws HandlerException, AdaptorConfigurationException, JsonProcessingException, IOException {
 		KafkaReaderHandler handler = new KafkaReaderHandler();
 		Map<String, Object> propertyMap = new HashMap<>();
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
 
-		srcDEscEntryMap.put("topic1:par1", "input1");
+		MapDescriptorParser descriptorParser = new MapDescriptorParser();
+		String jsonString = "{\"unit-input\" : {\"entity-name\" : \"unit-entity-name-value\",\"topic\" : \"topic1\",\"partition\" : \"test\", \"unit-separator\" : \"unit-separator-value\"}}";
+
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode actualObj = mapper.readTree(jsonString);
+		Map<String, Object> properties = new JsonHelper().getNodeTree(actualObj);
+		Map<Object, String> srcDEscEntryMap = descriptorParser.parseDescriptor("unit-input", properties.get("unit-input"));
+
 		propertyMap.put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC,
 				srcDEscEntryMap.entrySet().iterator().next());
 
@@ -341,16 +344,24 @@ public class KafkaReaderHandlerTest {
 	/**
 	 * If the RuntimeStore throws a RuntimeInfoStoreException,
 	 * KafkaReaderHandler cant proceed.
+	 * @throws IOException 
+	 * @throws JsonProcessingException 
 	 * 
 	 * @throws Throwable
 	 */
 	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "io.bigdime.core.runtimeinfo.RuntimeInfoStoreException: *")
-	public void tesBuildWithExceptionFromRuntimeInfo() throws AdaptorConfigurationException, RuntimeInfoStoreException{
+	public void tesBuildWithExceptionFromRuntimeInfo() throws AdaptorConfigurationException, RuntimeInfoStoreException, JsonProcessingException, IOException{
 		KafkaReaderHandler handler = new KafkaReaderHandler();
 		Map<String, Object> propertyMap = new HashMap<>();
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
 
-		srcDEscEntryMap.put("topic1:0", "input1");
+		MapDescriptorParser descriptorParser = new MapDescriptorParser();
+		String jsonString = "{\"unit-input\" : {\"entity-name\" : \"unit-entity-name-value\",\"topic\" : \"unit-topic-value\",\"partition\" : \"0\", \"unit-separator\" : \"unit-separator-value\"}}";
+
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode actualObj = mapper.readTree(jsonString);
+		Map<String, Object> properties = new JsonHelper().getNodeTree(actualObj);
+		Map<Object, String> srcDEscEntryMap = descriptorParser.parseDescriptor("unit-input", properties.get("unit-input"));
+
 		propertyMap.put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC,
 				srcDEscEntryMap.entrySet().iterator().next());
 

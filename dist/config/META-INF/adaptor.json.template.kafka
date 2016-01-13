@@ -8,10 +8,18 @@
     "source": {
         "name": "kafka-api-source",
         "description": "source description",
-	"source-type": "kakfa",
+		"source-type": "kakfa",
         "src-desc": {       
-            "input1" : "topic:partition1",
-            "input2" : "topic:partition2"        
+	            "input1": {
+	                "topic": "topic_value",
+	                "partition": "partition_value",
+	                "entity-name": "entity-value"
+	            },
+	            "input2": {
+	                "topic": "topic_name",
+	                "partition": "partition_value",
+	                "entity-name": "entity-value"
+	            }
             },
         "data-handlers": [
             {
@@ -20,7 +28,6 @@
                 "handler-class": "io.bigdime.handler.kafka.KafkaReaderHandler",
                 "properties": {
                     "brokers": "${kafka_brokers}",
-                    "offset-data-dir": "/tmp",
                     "messageSize": "20000"
                 }
             },
@@ -41,7 +48,6 @@
 	        "properties": {
 	            "messageSize": "20000",
 	            "schemaFileName" :"${hive_schema_file_name}",
-	            "entityName" :"${entity_name}",
                      "channel-map" : "input1:channel1, input2:channel2"
 	        }
              }

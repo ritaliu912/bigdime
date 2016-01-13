@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.mockito.Mock;
@@ -47,7 +48,9 @@ import io.bigdime.core.AdaptorContext;
 import io.bigdime.core.DataChannel;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.JsonHelper;
+import io.bigdime.core.commons.MapDescriptorParser;
 import io.bigdime.core.config.AdaptorConfig;
+import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.core.handler.SimpleJournal;
 @ContextConfiguration(classes = { MetaDataJsonUtils.class})
@@ -60,22 +63,33 @@ public class JsonHiveSchemaMapperHandlerTest extends AbstractTestNGSpringContext
 	Map<String, Object> propertyMap = null;
 	@Autowired
 	MetaDataJsonUtils metaDataJsonUtils;
-	public static final String entityName = "trackingevents";
+	public static final String entityName = "clickStreamEvents";
 	@BeforeTest
-	public void setUp() {
+	public void setUp() throws JsonProcessingException, IOException {
 		initMocks(this);
 		adaptorConfig = AdaptorConfig.getInstance();
 		adaptorcontext = adaptorConfig.getAdaptorContext();
 		jsonHelper = new JsonHelper();
 		propertyMap = new HashMap<String, Object>(); 
-		propertyMap.put(ENTITY_NAME,"trackingevents");
+		propertyMap.put(ENTITY_NAME,entityName);
 		propertyMap.put(SCHEMA_FILE_NAME,"click-stream-hive-schema.json");
 		propertyMap.put(ROW_SEPARATED_BY,CTRL_A);
 		propertyMap.put(COLUMN_SEPARATED_BY,EOL);
+		
+		MapDescriptorParser descriptorParser = new MapDescriptorParser();
+		String jsonString = "{\"unit-input\" : {\"entity-name\" : \"clickStreamEvents\",\"topic\" : \"topic1\",\"partition\" : \"1\", \"unit-separator\" : \"unit-separator-value\"}}";
+
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode actualObj = mapper.readTree(jsonString);
+		Map<String, Object> properties = new JsonHelper().getNodeTree(actualObj);
+		Map<Object, String> srcDEscEntryMap = descriptorParser.parseDescriptor("unit-input", properties.get("unit-input"));
+		propertyMap.put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC,
+				srcDEscEntryMap.entrySet().iterator().next());
+		
 	}
 
 	String sampleMessage = "{ \"account\": \"desktop-us\", \"events\": [ { \"name\": \"banner:manualImpression\", \"properties\": { \"prop1\": \"mock1_value\", \"prop2\": \"mock2_value\" }, \"timestamp\": \"2014-09-23T15:15:30Z\" } ], \"context\": { \"context1\": \"c_mock1_value\", \"context2\": \"c_mock2_value\", \"context3\": \"c_mock2_value\" } }";
-	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/data/clickstream\" }, \"hiveTable\": { \"name\": \"trackingevents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
+	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/data/clickstream\" }, \"hiveTable\": { \"name\": \"clickStreamEvents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
 	String serverTimeStampMessage = "{ \"account\": \"desktop-us\", \"events\": [ { \"name\": \"banner:manualImpression\", \"properties\": { \"prop1\": \"mock1_value\", \"prop2\": \"mock2_value\" }, \"timestamp\": \"2014-09-23T15:15:30Z\" } ], \"context\": { \"context1\": \"c_mock1_value\", \"context2\": \"c_mock2_value\", \"context3\": \"c_mock2_value\", \"serverTimestamp\": \"2015-07-30T02:50:26Z\" } }";
 
 	
@@ -123,7 +137,7 @@ public class JsonHiveSchemaMapperHandlerTest extends AbstractTestNGSpringContext
 		JsonHiveSchemaMapperHandler hiveSchemaHandler = new JsonHiveSchemaMapperHandler();
 		ReflectionTestUtils.setField(hiveSchemaHandler, "entityName", entityName);
 		ObjectMapper objectMapper1 = new ObjectMapper();
-		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app",
+		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app","clickStreamEvents",
 				objectMapper1.readTree(trackingSchema.getBytes()));
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.setBody(serverTimeStampMessage.getBytes());
@@ -147,7 +161,7 @@ public class JsonHiveSchemaMapperHandlerTest extends AbstractTestNGSpringContext
 		ObjectMapper objectMapper1 = new ObjectMapper();
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.setBody(sampleMessage.getBytes());
-		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app",
+		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app","clickStreamEvents",
 				objectMapper1.readTree(trackingSchema.getBytes()));
 		adaptorcontext.setAdaptorName("mock-adapter");
 
@@ -227,7 +241,7 @@ public class JsonHiveSchemaMapperHandlerTest extends AbstractTestNGSpringContext
 		MetadataStore mockMetadataStore = Mockito.mock(MetadataStore.class);
 		ReflectionTestUtils.setField(hiveSchemaHandler, "metadataStore", mockMetadataStore);
 		ObjectMapper objectMapper1 = new ObjectMapper();
-		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app",
+		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app","clickStreamEvents",
 				objectMapper1.readTree(trackingSchema.getBytes(Charset.defaultCharset())));
 
 		adaptorcontext.setAdaptorName("mock-adapter");

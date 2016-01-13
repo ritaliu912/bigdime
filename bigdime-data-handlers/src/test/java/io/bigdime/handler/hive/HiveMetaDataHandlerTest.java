@@ -45,7 +45,7 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 	@Autowired
 	MetaDataJsonUtils metaDataJsonUtils;
 	ObjectMapper objectMapper1 = new ObjectMapper();
-	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/tmp/data\", \"external\": \"true\" }, \"hiveTable\": { \"name\": \"trackingevents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
+	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/tmp/data\", \"external\": \"true\" }, \"hiveTable\": { \"name\": \"clickStreamEvents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
 	EmbeddedHiveServer embeddedHiveServer = null;
 
 	Properties props = new Properties();
@@ -69,7 +69,7 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 		List<ActionEvent> actionEvents = new ArrayList<>();
 		ActionEvent actionEvent = new ActionEvent();
 		HashMap<String,String> headers = new HashMap<String,String>();
-		headers.put(ActionEventHeaderConstants.ENTITY_NAME, "trackingevents");
+		headers.put(ActionEventHeaderConstants.ENTITY_NAME, "clickStreamEvents");
 		headers.put(ActionEventHeaderConstants.HIVE_PARTITION_NAMES, "account,dt");
 		headers.put(ActionEventHeaderConstants.HIVE_PARTITION_VALUES, "testaccount,20150101");
 		headers.put(ActionEventHeaderConstants.HIVE_PARTITION_LOCATION, FileUtils.getTempDirectoryPath()+File.separator
@@ -88,10 +88,10 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 			throws ClientProtocolException, IOException, InterruptedException, MetadataAccessException {
 		HiveMetaDataHandler hiveMetaDataHandler = new HiveMetaDataHandler();
 		metadataStore = Mockito.mock(MetadataStore.class);
-		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app",
+		Metasegment metaSegment = metaDataJsonUtils.convertJsonToMetaData("mock-app","clickStreamEvents",
 				objectMapper1.readTree(trackingSchema.getBytes()));
 		when(metadataStore.getAdaptorMetasegment(anyString(), anyString(), anyString())).thenReturn(metaSegment);
-		when(metadataStore.getAdaptorEntity(anyString(), anyString(), anyString())).thenReturn(metaSegment.getEntity("trackingevents"));
+		when(metadataStore.getAdaptorEntity(anyString(), anyString(), anyString())).thenReturn(metaSegment.getEntity("clickStreamEvents"));
 		metaSegment.setDatabaseLocation(FileUtils.getUserDirectoryPath() +File.separator+"BD_TEST"+"_"+System.currentTimeMillis()+metaSegment.getDatabaseName()+File.separator);
 		//when(metaSegment.getDatabaseLocation()).thenReturn(FileUtils.getTempDirectoryPath()+File.separator+metaSegment.getDatabaseName()+File.separator);
 		ReflectionTestUtils.setField(hiveMetaDataHandler, "metadataStore", metadataStore);

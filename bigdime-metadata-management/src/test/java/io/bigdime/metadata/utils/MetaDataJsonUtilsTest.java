@@ -44,25 +44,25 @@ public class MetaDataJsonUtilsTest {
 		jsonHelper = new JsonHelper();
 	}
 
-	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/data/clickstream\" }, \"hiveTable\": { \"name\": \"trackingevents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
+	String trackingSchema = "{ \"name\": \"MetaInformation\", \"version\": \"1.1.0\", \"type\": \"map\", \"entityProperties\": { \"hiveDatabase\": { \"name\": \"clickstream\", \"location\": \"/data/clickstream\" }, \"hiveTable\": { \"name\": \"clickStreamEvents\", \"type\": \"external\", \"location\": \"/data/clickstream/raw\" }, \"hivePartitions\": { \"feed\": { \"name\": \"feed\", \"type\": \"string\", \"comments\": \"The account or feed for a data stream.\" }, \"dt\": { \"name\": \"dt\", \"type\": \"string\", \"comments\": \"The date partition for a data stream.\" } }, \"properties\": { \"account\": { \"name\": \"account\", \"type\": \"string\", \"comments\": \"The identifier for the data feed.\" }, \"prop1\": { \"name\": \"prop1\", \"type\": \"string\", \"comments\": \"The identifier for the prop1\" }, \"prop2\": { \"name\": \"prop2\", \"type\": \"string\", \"comments\": \"The identifier for the prop2\" }, \"context1\": { \"name\": \"context1\", \"type\": \"string\", \"comments\": \"The identifier for the context1\" }, \"context2\": { \"name\": \"context2\", \"type\": \"string\", \"comments\": \"The identifier for the context2\" } } } }";
 
 	@Test
 	public void testConvertJsonToMetaData() throws JsonProcessingException, IOException {
+		String entityName = "clickStreamEvents";
 		MetaDataJsonUtils metadataJsonUtils = new MetaDataJsonUtils();
 		ObjectMapper schemaMapper = new ObjectMapper();
-		Metasegment metaSegment = metadataJsonUtils.convertJsonToMetaData("mock-app",
+		Metasegment metaSegment = metadataJsonUtils.convertJsonToMetaData("mock-app",entityName,
 				schemaMapper.readTree(trackingSchema.getBytes()));
 		JsonNode schema = schemaMapper.readTree(trackingSchema.getBytes());
 
 		JsonNode entityProperties = jsonHelper.getRequiredNode(schema, "entityProperties");
 		JsonNode hiveDatabase = jsonHelper.getRequiredNode(entityProperties, "hiveDatabase");
-		JsonNode hiveTable = jsonHelper.getRequiredNode(entityProperties, "hiveTable");
 		JsonNode hivePartitions = jsonHelper.getRequiredNode(entityProperties, "hivePartitions");
 
 		Assert.assertEquals(metaSegment.getAdaptorName(), "mock-app");
 		Assert.assertEquals(metaSegment.getEntitees().size(), 1);
 		Assert.assertEquals(
-				metaSegment.getEntity(jsonHelper.getRequiredStringProperty(hiveTable, "name")).getAttributes().size(),
+				metaSegment.getEntity(entityName).getAttributes().size(),
 				5);
 		Assert.assertEquals(metaSegment.getDatabaseName(), jsonHelper.getRequiredStringProperty(hiveDatabase, "name"));
 		Assert.assertEquals(metaSegment.getDatabaseLocation(),

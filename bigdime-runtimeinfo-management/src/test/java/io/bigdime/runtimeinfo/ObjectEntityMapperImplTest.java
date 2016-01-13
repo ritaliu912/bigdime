@@ -44,8 +44,7 @@ public class ObjectEntityMapperImplTest {
 	@Mock
 	List<RuntimeInfoDTO> mockRuntimeInfoDTOList;
 	
-	@Mock
-	Map<String,String> mockMap;
+	
 	
 	@Mock
 	Iterator<RuntimePropertyDTO> iterator;
@@ -53,7 +52,7 @@ public class ObjectEntityMapperImplTest {
 	public void init(){
 		initMocks(this);
 		objectEntityMapper = new ObjectEntityMapperImpl();
-		ReflectionTestUtils.setField(objectEntityMapper, "properties", mockMap);
+		//ReflectionTestUtils.setField(objectEntityMapper, "properties", mockMap);
 		Mockito.when(mockRuntimeInfoDTO.getRuntimeId()).thenReturn(1);
 		Mockito.when(mockRuntimeInfoDTO.getAdaptorName()).thenReturn("testAdaptorName");
 		Mockito.when(mockRuntimeInfoDTO.getEntityName()).thenReturn("testEntityName");
@@ -130,7 +129,7 @@ public class ObjectEntityMapperImplTest {
 		Mockito.when(mockEntry.getValue()).thenReturn("testValue");
 		
 		
-		ReflectionTestUtils.setField(objectEntityMapper, "runtimePropertyDTOSet", mockRuntimePropertyDTOSet);
+		//ReflectionTestUtils.setField(objectEntityMapper, "runtimePropertyDTOSet", mockRuntimePropertyDTOSet);
 		Mockito.when(mockRuntimePropertyDTOSet.size()).thenReturn(2);
 		Assert.assertNotNull(objectEntityMapper.mapEntityObject(mockRuntimeInfo));
 		

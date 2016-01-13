@@ -4,8 +4,13 @@
 package io.bigdime.handler.kafka;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.boot.actuate.metrics.CounterService;
 import org.springframework.context.annotation.Scope;
@@ -22,6 +27,7 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.commons.TimeManager;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
@@ -52,6 +58,16 @@ public class KafkaReaderHandler extends AbstractHandler {
 	private static final String KAFKA_MESSAGE_READER_OFFSET = "kafka_message_offset";
 	//	@Autowired
 	//	protected CounterService counterService;
+	private TimeManager timeManager = TimeManager.getInstance();
+	private static final String DF = "yyyyMMdd";
+	private static final String HOUR_FORMAT = "HH";	
+	private static final DateTimeZone timeZone = DateTimeZone.forID("UTC");
+	
+	private static final DateTimeFormatter hourFormatter = DateTimeFormat.forPattern(HOUR_FORMAT).withZone(timeZone);
+	private static final DateTimeFormatter formatter = DateTimeFormat.forPattern(DF).withZone(timeZone);
+	private final String TIMESTAMP = "DT";
+	private final String HOUR = "HOUR";
+
 	/**
 	 * KakfaConsumer component that's used to fetch data from Kafka.
 	 */
@@ -82,34 +98,25 @@ public class KafkaReaderHandler extends AbstractHandler {
 		logger.info(handlerPhase, "handler_id={} handler_name={} properties={}", getId(), getName(), getPropertyMap());
 		String brokers = PropertyHelper.getStringProperty(getPropertyMap(), KafkaReaderHandlerConstants.BROKERS);
 
-		String topicColonPartition = null;
 
 		logger.debug(handlerPhase, "KafkaReader={}", this.toString());
 
-		/*
-		 * If INPUT-DESC is present, ignore src-desc.
-		 */
-		String inputDesc = PropertyHelper.getStringProperty(getPropertyMap(), KafkaReaderHandlerConstants.INPUT_DESC);
-		logger.info(handlerPhase, "input-desc={}", inputDesc);
-
 		@SuppressWarnings("unchecked")
-		Entry<String, String> srcDescInputs = (Entry<String, String>) getPropertyMap()
-		.get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
-
-		topicColonPartition = srcDescInputs.getKey();
-
+		Entry<Object, String> srcDescInputs = (Entry<Object, String>) getPropertyMap().get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
+		
+		@SuppressWarnings("unchecked")
+		Map<String,Object>  inputMetadata = (Map<String,Object>) srcDescInputs.getKey();
+		
 		inputDescriptor = new KafkaInputDescriptor();
 		try {
-			inputDescriptor.parseDescriptor(topicColonPartition);
-		} catch (NumberFormatException ex) {
-			throw new InvalidValueConfigurationException("incorrect value of partition specified in src-desc");
+			inputDescriptor.parseDescriptor(inputMetadata);
 		} catch (IllegalArgumentException ex) {
 			throw new InvalidValueConfigurationException(
-					"incorrect value specified in src-desc, value must be in topic:partition format");
+					 "incorrect value specified in src-desc "+ ex.getMessage());
 		}
 
 		try {
-			currentOffset = getOffsetFromRuntimeInfo(runtimeInfoStore,inputDescriptor.getTopic(), String.valueOf(inputDescriptor.getPartition()), KAFKA_MESSAGE_READER_OFFSET);
+			currentOffset = getOffsetFromRuntimeInfo(runtimeInfoStore,inputDescriptor.getEntityName(), String.valueOf(inputDescriptor.getPartition()), KAFKA_MESSAGE_READER_OFFSET);
 		} catch (RuntimeInfoStoreException e) {
 			throw new AdaptorConfigurationException(e);
 		}
@@ -233,6 +240,12 @@ public class KafkaReaderHandler extends AbstractHandler {
 				String.valueOf(inputDescriptor.getPartition()));
 		actionEvent.getHeaders().put(KAFKA_MESSAGE_READER_OFFSET, String.valueOf(messageOffset));
 
+		DateTime dt = timeManager.getLocalDateTime();
+		String dateFormat = timeManager.format(TimeManager.FORMAT_YYYYMMDD, dt);
+		String hour = hourFormatter.print(dt);
+		actionEvent.getHeaders().put(TIMESTAMP, dateFormat);
+		actionEvent.getHeaders().put(HOUR, hour);
+		
 		processChannelSubmission(actionEvent);
 
 		if (getTotalReadFromJournal() == getTotalSizeFromJournal()) {
