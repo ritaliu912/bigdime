@@ -186,7 +186,7 @@ public class MultipleLoggerFactoryTest {
 			Thread.sleep(100);
 		} catch (Exception e) {
 			Assert.fail(e.getMessage());
-		}
+		} 
 	}
 
 	@Test

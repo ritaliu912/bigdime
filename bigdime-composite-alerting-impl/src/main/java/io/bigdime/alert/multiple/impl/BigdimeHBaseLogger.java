@@ -92,14 +92,11 @@ public class BigdimeHBaseLogger implements Logger {
 			}
 			if (logger.hbaseAlertLevel != null) {
 				if (logger.hbaseAlertLevel.equalsIgnoreCase("debug")) {
-					logger.debugEnabled = true;
-					logger.infoEnabled = true;
-					logger.warnEnabled = true;
+					setDebugEnabled(logger);
 				} else if (logger.hbaseAlertLevel.equalsIgnoreCase("info")) {
-					logger.infoEnabled = true;
-					logger.warnEnabled = true;
+					setInfoEnabled(logger);
 				} else if (logger.hbaseAlertLevel.equalsIgnoreCase("warn")) {
-					logger.warnEnabled = true;
+					setWarnEnabled(logger);
 				}
 			}
 			logger.executorService = Executors.newFixedThreadPool(1);
@@ -245,22 +242,8 @@ public class BigdimeHBaseLogger implements Logger {
 	}
 
 	private void logToHBase(final List<Put> tempPuts) {
-		FutureTask<Object> futureTask = new FutureTask<>(new Callable<Object>() {
-			@Override
-			public Object call() throws Exception {
-				DataInsertionSpecification.Builder dataInsertionSpecificationBuilder = new DataInsertionSpecification.Builder();
-				DataInsertionSpecification dataInsertionSpecification = dataInsertionSpecificationBuilder
-						.withTableName(hbaseTableName).withtPuts(tempPuts).build();
-				try {
-					hbaseManager.insertData(dataInsertionSpecification);
-					tempPuts.clear();
-				} catch (IOException | HBaseClientException e) {
-					e.printStackTrace();// what else to do
-				}
-				return null;
-			}
-
-		});
+		HBaseLogTask logTask = new HBaseLogTask(hbaseManager, hbaseTableName, tempPuts);
+		FutureTask<Object> futureTask = new FutureTask<>(logTask);
 		executorService.execute(futureTask);
 	}
 
@@ -302,27 +285,27 @@ public class BigdimeHBaseLogger implements Logger {
 
 	private void logToHBase(final AlertMessage message, final String level, final Throwable t) {
 		final Put put = buildPut(message.getAdaptorName(), message.getMessageContext(), message.getMessage(), level,
-				null, t);
+				message, t);
 		logIt(put);
 	}
 
 	private void logIt(final Put put) {
-		FutureTask<Object> futureTask = new FutureTask<>(new Callable<Object>() {
-			@Override
-			public Object call() throws Exception {
-				DataInsertionSpecification.Builder dataInsertionSpecificationBuilder = new DataInsertionSpecification.Builder();
-				DataInsertionSpecification dataInsertionSpecification = dataInsertionSpecificationBuilder
-						.withTableName(hbaseTableName).withtPut(put).build();
-				try {
-					hbaseManager.insertData(dataInsertionSpecification);
-				} catch (IOException | HBaseClientException e) {
-					e.printStackTrace();// what else to do
-				}
-				return null;
-			}
-
-		});
+		HBaseLogTask logTask = new HBaseLogTask(hbaseManager, hbaseTableName, put);
+		FutureTask<Object> futureTask = new FutureTask<>(logTask);
 		executorService.execute(futureTask);
 	}
 
+	private static void setDebugEnabled(BigdimeHBaseLogger logger) {
+		logger.debugEnabled = true;
+		setInfoEnabled(logger);
+	}
+
+	private static void setInfoEnabled(BigdimeHBaseLogger logger) {
+		logger.infoEnabled = true;
+		setWarnEnabled(logger);
+	}
+
+	private static void setWarnEnabled(BigdimeHBaseLogger logger) {
+		logger.warnEnabled = true;
+	}
 }

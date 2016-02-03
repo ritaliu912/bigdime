@@ -30,7 +30,7 @@ public class PartitionParserHandlerTest {
 		Assert.assertEquals(partitionNamesParserHandler.getHeaderName(), ActionEventHeaderConstants.SOURCE_FILE_NAME);
 		// Assert.assertEquals(partitionNamesParserHandler.getPartitionNames(),
 		// "account, timestamp");
-		Assert.assertEquals(partitionNamesParserHandler.getTruncateCharacters(), "-:");
+//		Assert.assertEquals(partitionNamesParserHandler.getTruncateCharacters(), "-:");
 	}
 
 	@Test
@@ -58,7 +58,10 @@ public class PartitionParserHandlerTest {
 		propertyMap.put(PartitionNamesParserHandlerConstants.HEADER_NAME, ActionEventHeaderConstants.SOURCE_FILE_NAME);
 		propertyMap.put(PartitionNamesParserHandlerConstants.REGEX, "(.*)_(\\d{2}(?:-?)\\d{2}(?:-?)\\d{4}).log$");
 		propertyMap.put(PartitionNamesParserHandlerConstants.PARTITION_NAMES, "account, timestamp");
-		propertyMap.put(PartitionNamesParserHandlerConstants.TRUNCATE_CHARACTERS, "-:");
+//		propertyMap.put(PartitionNamesParserHandlerConstants.TRUNCATE_CHARACTERS, "-:");
+		propertyMap.put(PartitionNamesParserHandlerConstants.DATE_PARTITION_NAME, "timestamp");
+		propertyMap.put(PartitionNamesParserHandlerConstants.DATE_PARTITION_INPUT_FORMAT, "MM-dd-yyyy");
+		propertyMap.put(PartitionNamesParserHandlerConstants.DATE_PARTITION_OUTPUT_FORMAT, "yyyyMMdd");
 		partitionNamesParserHandler.setPropertyMap(propertyMap);
 		partitionNamesParserHandler.build();
 		return partitionNamesParserHandler;

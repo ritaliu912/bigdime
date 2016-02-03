@@ -33,6 +33,7 @@ public class HdfsFilePathBuilder {
 	private String relativePath;
 	private Map<String, String> tokenToHeaderNameMap;
 	private ActionEvent actionEvent;
+	private String partitionNames;
 	private String partitionValues;
 	private Map<String, String> hivePartitionNameValueMap = new LinkedHashMap<>();
 
@@ -139,13 +140,24 @@ public class HdfsFilePathBuilder {
 		if (actionEvent.getHeaders() == null) {
 			return detokenizedHdfsPath;
 		}
+		partitionNames = actionEvent.getHeaders().get(ActionEventHeaderConstants.HIVE_PARTITION_NAMES);
 		partitionValues = actionEvent.getHeaders().get(ActionEventHeaderConstants.HIVE_PARTITION_VALUES);
 		if (!StringUtils.isBlank(partitionValues)) {
 			String[] partitionList = partitionValues.split(",");
+			// If the "partition-names" field was set, then we need to get the
+			// partition names from headers
+			String[] partitionNameList = null;
+			if (partitionNames != null)
+				partitionNameList = partitionNames.split(",");
 			StringBuilder builder = new StringBuilder(detokenizedHdfsPath);
+			int partitionIndex = 0;
 			for (String partitionValue : partitionList) {
 				builder.append(partitionValue).append(File.separator);
-				hivePartitionNameValueMap.put(partitionValue, partitionValue);
+				if (partitionNameList != null && partitionNameList.length >= partitionIndex)
+					hivePartitionNameValueMap.put(partitionNameList[partitionIndex], partitionValue);
+				else
+					hivePartitionNameValueMap.put(partitionValue, partitionValue);
+				partitionIndex++;
 			}
 			detokenizedHdfsPath = builder.toString();
 			return detokenizedHdfsPath;
