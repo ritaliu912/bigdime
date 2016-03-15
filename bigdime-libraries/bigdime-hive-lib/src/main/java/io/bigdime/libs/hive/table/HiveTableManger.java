@@ -161,36 +161,14 @@ public class HiveTableManger extends HiveConfigManager {
 			String tableName, String filterCol,
 			String host, int port, Map<String, String> configuration)
 			throws HCatException {
-//		HiveConf hcatConf;
-//		hcatConf = new HiveConf(HiveTableManger.class);
+
 		ReadEntity.Builder builder = new ReadEntity.Builder();
 		
 		ReadEntity entity = builder.withDatabase(databaseName)
 				.withTable(tableName).withFilter(filterCol).build();
-//		Map<String, String> configuration = new HashMap<String, String>();
-	
+
 		configuration.put(HiveConf.ConfVars.METASTOREURIS.toString(),
 				"thrift://" + host +  ":"+ port);
-//		configuration.put(
-//				HiveConf.ConfVars.METASTORETHRIFTCONNECTIONRETRIES.toString(),
-//				"3");
-////		configuration.put(HiveConf.ConfVars.SEMANTIC_ANALYZER_HOOK.varname,
-////				hcatConf.get(HiveConf.ConfVars.SEMANTIC_ANALYZER_HOOK.varname));
-////		configuration.put(HiveConf.ConfVars.PREEXECHOOKS.varname,
-////				hcatConf.get(HiveConf.ConfVars.PREEXECHOOKS.varname));
-////		configuration.put(HiveConf.ConfVars.POSTEXECHOOKS.varname,
-////				hcatConf.get(HiveConf.ConfVars.POSTEXECHOOKS.varname));
-//		configuration.put(
-//				HiveConf.ConfVars.METASTORE_CLIENT_SOCKET_TIMEOUT.varname,
-//				"60");
-//
-//		configuration
-//				.put(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname,
-//						hcatConf.get(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname));
-
-//		if (haEnabled) {
-//			addDFSConfigurations(configuration);
-//		}
 
 		HCatReader reader = DataTransferFactory.getHCatReader(entity,
 				configuration);
@@ -206,16 +184,4 @@ public class HiveTableManger extends HiveConfigManager {
 
 		return context;
 	}
-//	public void addDFSConfigurations(Map<String, String> configuration) {
-//
-//		configuration.put(HiveClientConstants.DFS_CLIENT_FAILOVER_PROVIDER.replace(HiveClientConstants.HA_SERVICE_NAME,
-//				"hdfs-cluster"), "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider");
-//		configuration.put(HiveClientConstants.DFS_NAME_SERVICES, "hdfs-cluster");
-//		configuration.put(HiveClientConstants.DFS_HA_NAMENODES.replace(HiveClientConstants.HA_SERVICE_NAME, "hdfs-cluster"),
-//				HiveClientConstants.DFS_NAME_NODE_LIST);
-//		configuration.put(HiveClientConstants.DFS_NAME_NODE_RPC_ADDRESS_NODE1.replace(
-//				HiveClientConstants.HA_SERVICE_NAME, "hdfs-cluster"), "slcd000hnn201.stubcorp.com:8020");
-//		configuration.put(HiveClientConstants.DFS_NAME_NODE_RPC_ADDRESS_NODE2.replace(
-//				HiveClientConstants.HA_SERVICE_NAME, "hdfs-cluster"), "slcd000hnn203.stubcorp.com:8020");
-//	}
 }
